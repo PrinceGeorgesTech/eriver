@@ -3,9 +3,9 @@
 {% block navbar %}
 
 <ul class="nav nav-tabs">
-  <li role = "presentation" class ="active"><a href="/">Home</a></li>
-  <li role = "presentation"><a href="/events">Events</a></li>
-  <li role = "presentation"><a href="/info">Helpful Info</a></li>
+  {% block nav_home %}<li role = "presentation"><a href="/">Home</a></li>{% endblock %}
+  {% block nav_events %}<li role = "presentation"><a href="/events">Events</a></li>{% endblock %}
+  {% block nav_info %}<li role = "presentation"><a href="/info">Helpful Info</a></li>{% endblock %}
   <li role="presentation" class="dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-expanded="false">
       Important Locations <span class="caret"></span>
@@ -21,12 +21,11 @@
 {% endblock %}
 
 
-{%block title%} {{title}} {% endblock %}
+{%block title%} {% endblock %}
 
 {% block content %}
 
-<h1> {{header}} </h1>
-<p> {{content}} </p>
+
 
 {% endblock %}
 
