@@ -7,11 +7,18 @@ bootstrap = Bootstrap(app)
 
 @app.route("/")
 def index():
-    return render_template(
-        'base.html',
-        title="Home",
-        header="Information",
-        content="Content is here")
+    return render_template('base.html')
+
+
+@app.route("/events")
+def events():
+    return render_template('base.html')
+
+
+@app.route("/info")
+def info():
+    return render_template('base.html')
+
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
