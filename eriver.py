@@ -7,7 +7,7 @@ bootstrap = Bootstrap(app)
 
 @app.route("/")
 def index():
-    return render_template('base.html')
+    return render_template('home.html')
 
 
 @app.route("/events")
@@ -17,7 +17,7 @@ def events():
 
 @app.route("/info")
 def info():
-    return render_template('base.html')
+    return render_template('info.html')
 
 @app.route("/libraries")
 def libraries():
