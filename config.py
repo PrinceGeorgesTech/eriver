@@ -1,0 +1,2 @@
+DEBUG = True
+GA_ID = "UA-58988913-1"
