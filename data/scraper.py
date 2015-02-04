@@ -1,4 +1,5 @@
 import json
+import re
 
 from bs4 import BeautifulSoup
 from requests_cache.core import CachedSession
@@ -10,6 +11,7 @@ class GeneralAssemblyScraper:
         self.SITE = "http://www.mgaleg.maryland.gov/webmga/"
         self.TABLE_SITE = self.SITE + "frmmain.aspx?pid=legisrpage"
         self.CLIENT = CachedSession(cache_name)
+        self.EMAIL = re.compile('[\w+\.]+@[\w]+\.state\.md\.us')
 
     def organize_name(self, name_str):
         """ Get name field and transform it into a dictionary """
@@ -37,9 +39,21 @@ class GeneralAssemblyScraper:
         if url:
             url = self.fix_url(url.get('href'))
         name = self.organize_name(name_line.text)
-
-        print(name_line, name, url)
         return name, url
+
+    def extract_content_lines(self, title):
+        """ Funnels html into correct scraper for formatting """
+
+        content_lines = []
+        if title.text.strip(' :') == "Contact":
+            email = self.EMAIL.search(title.next_sibling.text)
+            if email:
+                content_lines = email.group(0)
+        else:
+            for line in title.next_sibling.strings:
+                content_lines.append(line)
+
+        return content_lines
 
     def scrape_individual_site(self, url):
         """ Scrape the candidate's individual site for additional info """
@@ -50,9 +64,7 @@ class GeneralAssemblyScraper:
         soup = soup.find("table", {"class": "spco"})
         for row in soup.find_all('tr'):
             title = row.find('th')
-            content_lines = []
-            for line in title.next_sibling.strings:
-                content_lines.append(line)
+            content_lines = self.extract_content_lines(title)
             data[title.text.strip(' :')] = content_lines
         return data
 
