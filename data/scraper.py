@@ -37,6 +37,8 @@ class GeneralAssemblyScraper:
         if url:
             url = self.fix_url(url.get('href'))
         name = self.organize_name(name_line.text)
+
+        print(name_line, name, url)
         return name, url
 
     def scrape_individual_site(self, url):
