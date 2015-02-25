@@ -12,6 +12,17 @@ class GeneralAssemblyScraper:
         self.TABLE_SITE = self.SITE + "frmmain.aspx?pid=legisrpage"
         self.CLIENT = CachedSession(cache_name)
         self.EMAIL = re.compile('[\w+\.]+@[\w]+\.state\.md\.us')
+        self.ADDY_RE = re.compile(
+            r"""(?P<city>.*)"""
+            r"""[\s]*?,[\s]*?(?P<state>[A-Z\.]{2,4})"""
+            r"""\s*(?P<zip>[0-9-]+)""")
+        self.PHONE_RE = re.compile(
+            r"""(?P<prefix>\+?[\d\s\(\)\-]*)"""
+            r"""(?P<area_code>\(?\d{3}\)?[\s\-\(\)]*)"""
+            r"""(?P<first_three>\d{3}[\-\s\(\)]*)"""
+            r"""(?P<last_four>\d{4}[\-\s]*)"""
+            r"""(?P<extension>[\s\(,]*?ext[ .]*?\d{3,5})?"""
+            r"""(?P<tty>\s*\(tty)?""", re.IGNORECASE)
 
     def organize_name(self, name_str):
         """ Get name field and transform it into a dictionary """
@@ -41,6 +52,68 @@ class GeneralAssemblyScraper:
         name = self.organize_name(name_line.text)
         return name, url
 
+    def clean_phone_number(self, line):
+        """
+        Given "(123) 456-7890 (Telephone)", extract the number and format
+        """
+        match = self.PHONE_RE.search(line)
+        if match:
+            # kill all non-numbers
+            prefix = "".join(ch for ch in match.group("prefix") if ch.isdigit())
+            area_code = "".join(ch for ch in match.group("area_code")
+                                if ch.isdigit())
+            first_three = "".join(ch for ch in match.group("first_three")
+                                  if ch.isdigit())
+            last_four = "".join(ch for ch in match.group("last_four")
+                                if ch.isdigit())
+            number = "-".join([area_code, first_three, last_four])
+            if prefix:
+                number = "+" + prefix + " " + number
+            extension = match.group("extension")
+            if extension:
+                extension = re.sub("\D", "", extension)
+                number = number + " x" + extension
+            return number
+
+    def extract_numbers(self, phones):
+        """
+        Extracts all phone numbers from a line and adds them to a list
+        """
+
+        clean_numbers = []
+        phones = re.sub('Toll-free in MD:', '', phones)
+        phones = phones.split("|")
+        for phone in phones:
+            phone = phone.strip()
+            if self.PHONE_RE.match(phone):
+                clean_numbers.append(self.clean_phone_number(phone))
+        return clean_numbers
+
+    def parse_address(self, address_elements):
+        """ Parse address and return address dict """
+
+        address_dict = {}
+        address_lines = []
+        for line in address_elements:
+            address_match = self.ADDY_RE.search(line)
+            if address_match:
+                address_dict['city'] = address_match.group('city')
+                address_dict['state'] = address_match.group('state')
+                address_dict['zip'] = address_match.group('zip')
+            elif line.startswith('Phone'):
+                phone = self.extract_numbers(line)
+                if len(phone) > 0:
+                    address_dict['phone_numbers'] = phone
+            elif line.startswith('Fax'):
+                fax = self.extract_numbers(line)
+                if len(fax) > 0:
+                    address_dict['fax'] = fax[-1]
+            else:
+                address_lines.append(line)
+        address_dict['address_lines'] = address_lines
+        return address_dict
+
+
     def extract_content_lines(self, title):
         """ Funnels html into correct scraper for formatting """
 
@@ -49,6 +122,8 @@ class GeneralAssemblyScraper:
             email = self.EMAIL.search(title.next_sibling.text)
             if email:
                 content_lines = email.group(0)
+        elif "Address" in title.text:
+            content_lines = self.parse_address(title.next_sibling.strings)
         else:
             for line in title.next_sibling.strings:
                 content_lines.append(line)
